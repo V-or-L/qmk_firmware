@@ -1,5 +1,7 @@
 #include QMK_KEYBOARD_H
 
+//
+
 enum ctrl_keycodes {
     U_T_AUTO = SAFE_RANGE, //USB Extra Port Toggle Auto Detect / Always Active
     U_T_AGCR,              //USB Toggle Automatic GCR control
@@ -46,6 +48,21 @@ void matrix_init_user(void) {
 // Runs constantly in the background, in a loop.
 void matrix_scan_user(void) {
 };
+
+bool rgb_matrix_indicators_user(void) {
+    
+    // change backlight color when layer 1 is active (Fn key pressed)
+    if(IS_LAYER_ON(1)) {
+        // backlight LEDs are at the end of the matrix, starting at position 87
+        // Keep in mind this map is 1-indexed while LED matrix is 0-indexed
+        // https://www.storyspooler.com/using-qmk-for-lights-on-massdrop-ctrl/
+        
+        for(int i = 87; i < 119; i++)
+            rgb_matrix_set_color(i, RGB_WHITE);
+    }
+    
+    return true;
+}
 
 #define MODS_SHIFT  (get_mods() & MOD_BIT(KC_LSFT) || get_mods() & MOD_BIT(KC_RSFT))
 #define MODS_CTRL  (get_mods() & MOD_BIT(KC_LCTL) || get_mods() & MOD_BIT(KC_RCTL))
