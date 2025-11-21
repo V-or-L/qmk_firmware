@@ -1,5 +1,9 @@
 #include QMK_KEYBOARD_H
 
+#ifdef RAW_ENABLE
+#    include "raw_hid.h"
+#endif
+
 //
 
 enum ctrl_keycodes {
@@ -26,7 +30,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,   KC_MPLY, KC_MSTP, KC_VOLU,
         _______, RGB_SPD, RGB_VAI, RGB_SPI, RGB_HUI, RGB_SAI, _______, U_T_AUTO,U_T_AGCR,_______, _______, _______, _______, _______,   KC_MPRV, KC_MNXT, KC_VOLD,
         _______, RGB_RMOD,RGB_VAD, RGB_MOD, RGB_HUD, RGB_SAD, _______, _______, _______, _______, _______, _______, _______,
-        _______, RGB_TOG, _______, _______, _______, MD_BOOT, NK_TOGG, _______, _______, _______, _______, _______,                              _______,
+        _______, RGB_TOG, _______, _______, _______, MD_BOOT, NK_TOGG, _______, _______, _______, DBG_TOG, _______,                              _______,
         _______, _______, _______,                   _______,                            _______, _______, _______, _______,            _______, _______, _______
     ),
     /*
@@ -49,16 +53,60 @@ void matrix_init_user(void) {
 void matrix_scan_user(void) {
 };
 
+void keyboard_post_init_user(void) {
+  // Customise these values to desired behaviour
+//  debug_enable=true;
+//  debug_matrix=true;
+//  debug_keyboard=true;
+//  debug_mouse=true;
+}
+
+#ifdef RAW_ENABLE
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    // Your code goes here
+    // `data` is a pointer to the buffer containing the received HID report
+    // `length` is the length of the report - always `RAW_EPSIZE`
+    
+#ifdef CONSOLE_ENABLE
+    dprintf("[raw_hid_receive] [Start]\n");
+    
+    dprintf("[raw_hid_receive]   Received %d bytes: ", length);
+    int i;
+    for(i = 0; i < length; i++) {
+        dprintf("%02X ", *(data+i));
+    }
+    dprintf("\n");
+#endif
+
+    uint8_t response[length];
+    memset(response, 0, length);
+    response[1] = 'B';
+
+    raw_hid_send(response, length);
+
+#ifdef CONSOLE_ENABLE
+    dprintf("[raw_hid_receive]   Sent %d bytes: ", length);
+    for(i = 0; i < length; i++) {
+        dprintf("%02X ", *(response+i));
+    }
+    dprintf("\n");
+
+    dprintf("[raw_hid_receive] [End]\n");
+#endif
+}
+#endif
+
 bool rgb_matrix_indicators_user(void) {
     
     // change backlight color when layer 1 is active (Fn key pressed)
     if(IS_LAYER_ON(1)) {
         // backlight LEDs are at the end of the matrix, starting at position 87
         // Keep in mind this map is 1-indexed while LED matrix is 0-indexed
-        // https://www.storyspooler.com/using-qmk-for-lights-on-massdrop-ctrl/
+        // See qmk/keyboards/massdrop/ctrl/led_map.png
         
         for(int i = 87; i < 119; i++)
             rgb_matrix_set_color(i, RGB_WHITE);
+        
     }
     
     return true;
@@ -70,7 +118,7 @@ bool rgb_matrix_indicators_user(void) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     static uint32_t key_timer;
-
+    
     switch (keycode) {
         case U_T_AUTO:
             if (record->event.pressed && MODS_SHIFT && MODS_CTRL) {
